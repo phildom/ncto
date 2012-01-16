@@ -1,0 +1,14 @@
+Copy files over a network using nc, tar and openssl.
+
+To view a help message, run:
+$ ncto -h
+More information can be found at: http://phildom.de/ncto.html
+
+A note for Linux and Mac users:
+If ksh is not available on your system, just change the hashbang [0]
+to /bin/bash or wherever your bash is hiding. Worked on Ubuntu 10.04
+and Debian Squeeze 6.0.  However, Mac OS X's bash has problems
+interpreting the pattern in the [[ expression ]] command.
+Just stay with its ksh.
+
+[0] https://secure.wikimedia.org/wikipedia/en/wiki/Shebang_(Unix)
