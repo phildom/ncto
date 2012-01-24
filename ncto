@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/usr/bin/env ksh
 
 # $Id: ncto,v 1.5 2011/10/03 19:57:17 phil Exp $
 
@@ -24,29 +24,32 @@ usage() {
 }
 
 help() {
-	echo "Copy files over a network using nc, tar and openssl." 1>&2
-	echo "There are two mutually exclusive modes: listen and connect." 1>&2
-	echo "By setting \"-l port\" ncto acts as the listening endpoint," 1>&2
-	echo "while by setting \"host port\" ncto acts as the connecting" 1>&2
-	echo "endpoint. Additionally, ncto takes the role of sender or" 1>&2
-	echo "receiver in both modes." 1>&2
-	echo "In order to achieve a successful file transfer, a connecting" 1>&2
-	echo "endpoint must connect to a listening endpoint. One of the" 1>&2
-	echo "two participants must be the sender and the other the" 1>&2
-	echo "receiver; this depends on whether files are specified on" 1>&2
-	echo "the command line." 1>&2
-	echo
+	cat <<EOF 1>&2
+Copy files over a network using nc, tar and openssl.
+There are two mutually exclusive modes: listen and connect.
+By setting \"-l port\" ncto acts as the listening endpoint,
+while by setting \"host port\" ncto acts as the connecting
+endpoint. Additionally, ncto takes the role of sender or
+receiver in both modes.
+In order to achieve a successful file transfer, a connecting
+endpoint must connect to a listening endpoint. One of the
+two participants must be the sender and the other the
+receiver; this depends on whether files are specified on
+the command line.
 
+EOF
 	usage
 
-	echo
-	echo "options:" 1>&2
-	echo "      -c cipher  specify cipher to use for encryption" 1>&2
-	echo "      -h         print this help" 1>&2
-	echo "      -p         send in plaintext withouth encryption" 1>&2
-	echo "      -V         print version and exit" 1>&2
-	echo "defaults:" 1>&2
-	echo "      encrypt with $cipher" 1>&2
+	cat <<EOF 1>&2
+
+options:
+      -c cipher  specify cipher to use for encryption
+      -h         print this help
+      -p         send in plaintext withouth encryption
+      -V         print version and exit
+defaults:
+      encrypt with $cipher
+EOF
 }
 
 check_cipher() {
@@ -54,19 +57,18 @@ check_cipher() {
 	ciphers=$(openssl list-cipher-commands)
 	for c in $ciphers
 	do
-		if [ "$cipher" = "$c" ]
-		then
+		if [ "$cipher" = "$c" ]; then
 			match=1
 			break;
 		fi
 	done
-	if [ $match = 0 ]
-	then
-		echo "Specified cipher isn't available." 1>&2
-		echo -n "Run following command to check" 1>&2
-		echo " which ciphers are available:" 1>&2
-		echo "    openssl list-cipher-commands" 1>&2
-		exit 1
+	if [ $match = 0 ]; then
+		cat <<EOF 1>&2
+Specified cipher isn't available.
+Run following command to check which ciphers are available:
+      openssl list-cipher-commands
+EOF
+	exit 1
 	fi
 }
 
@@ -78,7 +80,7 @@ read_pw() {
 	echo
 }
 
-if [ $# -lt 1 ] ; then
+if [ $# -lt 1 ]; then
 	usage
 	echo "ncto -h prints an explanation of the command" 1>&2
 	exit 1
@@ -98,6 +100,7 @@ crypt=1
 # With getopt(1) these filenames will not survive intact
 # after the getopt(1) call.
 # ops="chlpV"
+# THINKING about changing to case, so we are sh compliant
 while [[ $# > 0 && "$1" = \-* ]]
 do
 	op="$1"
@@ -107,13 +110,12 @@ do
 	do
 		case "$op" in
 		c*)
-			if [ "$op" = "c"  ]
-			then
+			if [ "$op" = "c"  ]; then
 				shift
 				cipher="$1"
 				op=""
 			else
-				cipher="$(echo "$op" | sed -E 's/^c[[:space:]]*//')"
+				cipher="$(echo "$op" | sed -e 's/^c[ 	]*//')"
 				op=""
 			fi
 			check_cipher
@@ -123,18 +125,16 @@ do
 			exit 0
 		;;
 		l*)
-			if [ "$op" = "l"  ]
-			then
+			if [ "$op" = "l"  ]; then
 				shift
 				port="$1"
 				op=""
 			else
-				port="$(echo "$op" | sed -E 's/^l[[:space:]]*//')"
+				port="$(echo "$op" | sed -e 's/^l[ 	]*//')"
 				op=""
 			fi
 
-			if [[ "$port" != +([0-9]) ]]
-			then
+			if [[ "$port" != +([0-9]) ]]; then
 				usage
 				exit 1
 			fi
@@ -159,12 +159,11 @@ done
 
 # Put the args into an array, so that nc can distinguish between
 # its arguments and print a correct error message, if necessary.
-if [ $listen = 1 ]
-then
+# THINKING about using $@ with set
+if [ $listen = 1 ]; then
 	ncargs[0]="-l"
 	ncargs[1]="$port"
-elif [ $# -ge 2 ]
-then
+elif [ $# -ge 2 ]; then
 	ip="$1"
 	port="$2"
 	shift 2
@@ -175,24 +174,20 @@ else
 	exit 1
 fi
 
-if [ $crypt = 1 ]
-then
-	if [ $match = 0 ]
-	then
+if [ $crypt = 1 ]; then
+	if [ $match = 0 ]; then
 		check_cipher
 	fi
 
 	read_pw
 
-	if [ $# -gt 0 ]
-	then
+	if [ $# -gt 0 ]; then
 		tar cvf - "$@" | openssl "$cipher" -e -k "$pw" | nc -O 10000 "${ncargs[@]}"
 	else
 		nc "${ncargs[@]}" | openssl "$cipher" -d -k "$pw" | tar xvf -
 	fi
 else
-	if [ $# -gt 0 ]
-	then
+	if [ $# -gt 0 ]; then
 		tar cvf - "$@" | nc -O 10000 "${ncargs[@]}"
 	else
 		nc "${ncargs[@]}" | tar xvf -
